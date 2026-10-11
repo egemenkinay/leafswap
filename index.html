@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leafswap Plant Care</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: single narrow column app, three tabs on top, list -> detail inside the Plants tab */
+:root{
+  --bg:#eef3ef; --surface:#ffffff; --ink:#14301f; --muted:#5a6e62; --line:#d3ddd5;
+  --leaf:#1f6b43; --leaf-soft:#dcebe1; --bloom:#b3246b; --warn:#a85a00; --warn-soft:#fbeed8;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1a14; --surface:#18261e; --ink:#e6f0e9; --muted:#9bb0a3; --line:#2c3d33;
+  --leaf:#6fcf97; --leaf-soft:#213a2c; --bloom:#f07ab0; --warn:#f0b35a; --warn-soft:#3a2c14; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1a14; --surface:#18261e; --ink:#e6f0e9; --muted:#9bb0a3; --line:#2c3d33;
+  --leaf:#6fcf97; --leaf-soft:#213a2c; --bloom:#f07ab0; --warn:#f0b35a; --warn-soft:#3a2c14; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);padding-inline:16px;padding-block:20px 48px}
+.app{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:1.75rem} h2{font-size:1.4rem} h3{font-size:1.05rem}
+p{margin:0}
+.sub{color:var(--muted);font-size:.95rem}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;font:600 1rem var(--body);color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--bloom)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--bloom);outline-offset:2px}
+.panel{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px;min-width:0}
+.search{flex:1 1 200px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 .9rem var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--leaf);border-color:var(--leaf);color:var(--bg)}
+.list{display:flex;flex-direction:column;gap:8px;list-style:none;margin:0;padding:0}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.item>div{min-width:0;flex:1 1 200px}
+button.item{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
+button.item:hover{border-color:var(--leaf)}
+.latin{font-style:italic;color:var(--muted);font-size:.9rem}
+.tag{display:inline-block;font-size:.8rem;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--leaf-soft);color:var(--leaf);white-space:nowrap}
+.tag.due{background:var(--warn-soft);color:var(--warn)}
+.btn{font:600 .95rem var(--body);border-radius:8px;padding:9px 14px;border:1px solid var(--leaf);background:var(--leaf);color:var(--bg);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--leaf)}
+.btn.plain{border-color:var(--line);background:transparent;color:var(--muted)}
+.btn:disabled{opacity:.55;cursor:default}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:16px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.facts dt{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.facts dd{margin:2px 0 0;font-weight:600}
+.myth{border-left:3px solid var(--bloom);padding-left:12px}
+.myth b{color:var(--bloom)}
+ul.plainlist{margin:0;padding-left:20px}
+form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+form label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
+form .full{grid-column:1/-1}
+.error{color:var(--bloom);font-weight:600;font-size:.9rem}
+.example{font-size:.75rem;color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:2px 8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:.9rem;max-width:calc(100% - 32px)}
+.empty{color:var(--muted);padding:20px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+</style>
+
+</head>
+<body style="margin:0">
+<div class="app">
+  <header>
+    <h1>Leafswap</h1>
+    <p class="sub">One clear care plan per plant. Swap the ones you have outgrown.</p>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-plants" data-tab="plants" aria-selected="true">Plants</button>
+    <button role="tab" id="tab-mine" data-tab="mine" aria-selected="false">My plants</button>
+    <button role="tab" id="tab-swap" data-tab="swap" aria-selected="false">Swap</button>
+  </nav>
+
+  <section class="panel" id="panel-plants"></section>
+  <section class="panel" id="panel-mine" hidden></section>
+  <section class="panel" id="panel-swap" hidden></section>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const PLANTS=[
+ {id:'monstera',name:'Monstera',latin:'Monstera deliciosa',level:'Easy',light:'medium',lightText:'Bright room, out of direct sun',days:8,water:'Every 7–10 days, when the top 3 cm of soil is dry',humidity:'Normal room air is fine',
+  myth:'Mist the leaves every day.',truth:'Misting does very little. Water the soil properly and wipe dust off the leaves once a month.',
+  mistakes:['Watering on a fixed calendar without checking the soil','Keeping it in a dark corner, which stops the leaves from splitting','Pot without drainage holes']},
+ {id:'pothos',name:'Pothos',latin:'Epipremnum aureum',level:'Easy',light:'low',lightText:'Low to medium light',days:9,water:'Every 7–12 days, when the leaves start to look slightly soft',humidity:'Normal room air is fine',
+  myth:'Pothos can live in a room with no window.',truth:'It survives low light but still needs some daylight. A shelf 2–3 m from a window works.',
+  mistakes:['Leaving it standing in water','Never trimming, which makes the vines thin and bare']},
+ {id:'snake',name:'Snake plant',latin:'Dracaena trifasciata',level:'Easy',light:'low',lightText:'Almost any light',days:18,water:'Every 2–3 weeks, only when the soil is fully dry',humidity:'Dry air is fine',
+  myth:'Water it weekly like other plants.',truth:'It stores water in its leaves. Weekly watering is the most common way to kill it.',
+  mistakes:['Overwatering in winter','Using dense soil that stays wet']},
+ {id:'zz',name:'ZZ plant',latin:'Zamioculcas zamiifolia',level:'Easy',light:'low',lightText:'Low to medium light',days:18,water:'Every 2–3 weeks, when the soil is fully dry',humidity:'Dry air is fine',
+  myth:'Yellow leaves mean it is thirsty.',truth:'On a ZZ plant yellow leaves almost always mean too much water. Let it dry out.',
+  mistakes:['Watering when in doubt','Repotting too often']},
+ {id:'peace',name:'Peace lily',latin:'Spathiphyllum wallisii',level:'Medium',light:'medium',lightText:'Medium light, no direct sun',days:6,water:'Every 5–7 days, keep the soil lightly moist',humidity:'Likes humid air, keep away from radiators',
+  myth:'Drooping means the plant is dying.',truth:'It droops when thirsty and recovers within hours after watering.',
+  mistakes:['Direct sun, which burns the leaves','Hard tap water causing brown tips']},
+ {id:'spider',name:'Spider plant',latin:'Chlorophytum comosum',level:'Easy',light:'medium',lightText:'Bright room, out of direct sun',days:7,water:'About once a week, when the top 2 cm of soil is dry',humidity:'Normal room air is fine',
+  myth:'Brown tips mean you need fertilizer.',truth:'Brown tips usually come from tap water minerals or dry soil, not from hunger.',
+  mistakes:['Too much fertilizer','Letting it dry out completely for weeks']},
+ {id:'fiddle',name:'Fiddle leaf fig',latin:'Ficus lyrata',level:'Hard',light:'bright',lightText:'Bright light, right next to a window',days:9,water:'Every 7–10 days, when the top 5 cm of soil is dry',humidity:'Normal room air, no cold drafts',
+  myth:'Move it around until it is happy.',truth:'It drops leaves when moved. Pick the brightest spot and leave it there.',
+  mistakes:['Moving the pot often','Cold drafts from doors and windows','Small sips of water instead of a full soak']},
+ {id:'calathea',name:'Calathea',latin:'Goeppertia orbifolia',level:'Hard',light:'medium',lightText:'Medium light, no direct sun',days:5,water:'Every 4–6 days, soil should never dry out fully',humidity:'Needs humid air, a bathroom or kitchen is best',
+  myth:'Any water is fine.',truth:'It is sensitive to tap water. Use filtered or rain water to avoid crispy edges.',
+  mistakes:['Dry heating air in winter','Direct sun','Letting the soil dry out']}
+];
+const LIGHTS=[['all','All'],['low','Low light'],['medium','Medium light'],['bright','Bright light']];
+const DAY=86400000;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+let state={tab:'plants',query:'',light:'all',open:null,
+  mine:load('ls-mine',[{id:'pothos',last:Date.now()-9*DAY},{id:'snake',last:Date.now()-4*DAY}]),
+  listings:load('ls-listings',[
+    {id:1,offer:'Pothos cutting',want:'Spider plant baby',city:'Potsdam',example:true,requested:false},
+    {id:2,offer:'Monstera (too big for my flat)',want:'Any small plant',city:'Berlin',example:true,requested:false},
+    {id:3,offer:'Snake plant pup',want:'Calathea',city:'Potsdam',example:true,requested:false}]),
+  formError:''};
+
+let toastTimer;
+function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,2200)}
+
+function renderPlants(){
+  const el=$('panel-plants');
+  if(state.open){
+    const p=PLANTS.find(x=>x.id===state.open), has=state.mine.some(m=>m.id===p.id);
+    el.innerHTML=`<div class="row"><button class="btn plain" id="back">← All plants</button></div>
+    <div class="plan">
+      <div><h2>${p.name}</h2><p class="latin">${p.latin}</p></div>
+      <dl class="facts">
+        <div><dt>Water</dt><dd>${p.water}</dd></div>
+        <div><dt>Light</dt><dd>${p.lightText}</dd></div>
+        <div><dt>Humidity</dt><dd>${p.humidity}</dd></div>
+        <div><dt>Difficulty</dt><dd>${p.level}</dd></div>
+      </dl>
+      <div class="myth"><p><b>You may have read:</b> ${p.myth}</p><p><b>Do this instead:</b> ${p.truth}</p></div>
+      <div><h3>Common mistakes</h3><ul class="plainlist">${p.mistakes.map(m=>`<li>${m}</li>`).join('')}</ul></div>
+      <div class="row"><button class="btn" id="add" ${has?'disabled':''}>${has?'In my plants':'Add to my plants'}</button></div>
+    </div>`;
+    $('back').onclick=()=>{state.open=null;renderPlants()};
+    $('add').onclick=()=>{state.mine.push({id:p.id,last:Date.now()});save('ls-mine',state.mine);toast(p.name+' added to My plants');renderPlants()};
+    return;
+  }
+  const q=state.query.trim().toLowerCase();
+  const rows=PLANTS.filter(p=>(state.light==='all'||p.light===state.light)&&(p.name+' '+p.latin).toLowerCase().includes(q));
+  el.innerHTML=`<div class="row"><input class="search" id="search" type="search" placeholder="Search plants" value="${esc(state.query)}" aria-label="Search plants"></div>
+  <div class="row">${LIGHTS.map(([k,l])=>`<button class="chip" data-light="${k}" aria-pressed="${state.light===k}">${l}</button>`).join('')}</div>
+  <ul class="list">${rows.map(p=>`<li><button class="item" data-open="${p.id}"><div><h3>${p.name}</h3><p class="latin">${p.latin}</p></div><span class="tag">${p.level}</span></button></li>`).join('')}</ul>`;
+  const s=$('search');
+  s.oninput=()=>{state.query=s.value;renderPlants();const n=$('search');n.focus();n.setSelectionRange(n.value.length,n.value.length)};
+  el.querySelectorAll('[data-light]').forEach(b=>b.onclick=()=>{state.light=b.dataset.light;renderPlants()});
+  el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{state.open=b.dataset.open;renderPlants()});
+}
+
+function dueText(m,p){
+  const left=p.days-Math.floor((Date.now()-m.last)/DAY);
+  if(left<=0) return ['Water today',true];
+  return ['Water in '+left+(left===1?' day':' days'),false];
+}
+function renderMine(){
+  const el=$('panel-mine');
+  if(!state.mine.length){el.innerHTML='<p class="empty">No plants yet. Open a plant in the Plants tab and add it.</p>';return}
+  el.innerHTML=`<p class="sub">Tap “Watered” after you water a plant. The next date updates.</p><ul class="list">${state.mine.map(m=>{
+    const p=PLANTS.find(x=>x.id===m.id),[txt,due]=dueText(m,p);
+    return `<li class="item"><div><h3>${p.name}</h3><span class="tag ${due?'due':''}">${txt}</span></div>
+      <div class="row"><button class="btn ghost" data-water="${p.id}">Watered</button><button class="btn plain" data-remove="${p.id}">Remove</button></div></li>`}).join('')}</ul>`;
+  el.querySelectorAll('[data-water]').forEach(b=>b.onclick=()=>{state.mine.find(m=>m.id===b.dataset.water).last=Date.now();save('ls-mine',state.mine);toast('Marked as watered');renderMine()});
+  el.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{state.mine=state.mine.filter(m=>m.id!==b.dataset.remove);save('ls-mine',state.mine);renderMine()});
+}
+
+function renderSwap(){
+  const el=$('panel-swap');
+  el.innerHTML=`<h2>Offer a plant</h2>
+  <form id="swapform" novalidate>
+    <label>I offer<input id="f-offer" placeholder="e.g. Pothos cutting"></label>
+    <label>I want<input id="f-want" placeholder="e.g. Spider plant"></label>
+    <label>City<input id="f-city" placeholder="e.g. Potsdam"></label>
+    <div class="full row"><button class="btn" type="submit">Post listing</button><span class="error" id="formerror">${state.formError}</span></div>
+  </form>
+  <h2>Listings near you</h2>
+  <ul class="list">${state.listings.map(l=>`<li class="item"><div><h3>${esc(l.offer)}</h3><p class="sub">Wants: ${esc(l.want)} · ${esc(l.city)}</p>${l.example?'<span class="example">Example listing</span>':''}</div>
+    ${l.own?'<span class="tag">Your listing</span>':`<button class="btn ghost" data-req="${l.id}" ${l.requested?'disabled':''}>${l.requested?'Requested':'Request swap'}</button>`}</li>`).join('')}</ul>`;
+  $('swapform').onsubmit=e=>{
+    e.preventDefault();
+    const o=$('f-offer').value.trim(),w=$('f-want').value.trim(),c=$('f-city').value.trim();
+    if(!o||!w||!c){state.formError='Please fill in all fields.';renderSwap();return}
+    state.formError='';
+    state.listings.unshift({id:Date.now(),offer:o,want:w,city:c,own:true});save('ls-listings',state.listings);toast('Listing posted');renderSwap();
+  };
+  el.querySelectorAll('[data-req]').forEach(b=>b.onclick=()=>{state.listings.find(l=>String(l.id)===b.dataset.req).requested=true;save('ls-listings',state.listings);renderSwap()});
+}
+
+function render(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===state.tab));
+  ['plants','mine','swap'].forEach(t=>$('panel-'+t).hidden=t!==state.tab);
+  ({plants:renderPlants,mine:renderMine,swap:renderSwap})[state.tab]();
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
+render();
+</script>
+</body>
+</html>
