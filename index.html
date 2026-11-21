@@ -6,7 +6,7 @@
 <title>Leafswap Plant Care</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
 <style>
-/* Layout: single narrow phone-first column, four tabs on top. v2: soil check, symptom helper, away planner, care note for friends */
+/* Layout: single narrow phone-first column, four tabs on top. v3: changes from usability test (problem button on each plant, plant-sitter note, send on WhatsApp, tab fix) */
 :root{
   --bg:#eef3ef; --surface:#ffffff; --ink:#14301f; --muted:#5a6e62; --line:#d3ddd5;
   --leaf:#1f6b43; --leaf-soft:#dcebe1; --bloom:#b3246b; --warn:#a85a00; --warn-soft:#fbeed8;
@@ -51,6 +51,7 @@ button.item:hover{border-color:var(--leaf)}
 .btn{font:600 .92rem var(--body);border-radius:8px;padding:9px 14px;border:1px solid var(--leaf);background:var(--leaf);color:var(--bg);cursor:pointer}
 .btn.ghost{background:transparent;color:var(--leaf)}
 .btn.plain{border-color:var(--line);background:transparent;color:var(--muted)}
+a.btn{text-decoration:none;display:inline-block}
 .btn:disabled{opacity:.55;cursor:default}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px}
 .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0}
@@ -196,10 +197,12 @@ function renderMine(){
       <div class="row">
         <button class="btn ghost" data-dry="${p.id}">Soil is dry, watered</button>
         <button class="btn plain" data-wet="${p.id}">Still damp</button>
+        <button class="btn plain" data-problem="${p.id}">Something wrong?</button>
         <button class="btn plain" data-remove="${p.id}">Remove</button>
       </div></li>`}).join('')}</ul>`;
   const find=id=>state.mine.find(m=>m.id===id);
   el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{state.tab='plants';state.open=b.dataset.open;render()});
+  el.querySelectorAll('[data-problem]').forEach(b=>b.onclick=()=>{state.help={plant:b.dataset.problem,symptom:null,soil:null};state.tab='help';render()});
   el.querySelectorAll('[data-dry]').forEach(b=>b.onclick=()=>{
     const m=find(b.dataset.dry),prev={...m};m.last=Date.now();delete m.next;saveMine();
     toast(P(m.id).name+' watered',()=>{Object.assign(m,prev);if(!prev.next)delete m.next;saveMine()});renderMine()});
@@ -214,7 +217,13 @@ function renderMine(){
 }
 
 /* ---------- Care note for a friend ---------- */
-function noteText(p){
+function noteText(p,mode){
+  if(mode==='sitter') return `Hi! I'm away for ${state.away} days. Could you water my ${p.name} while I'm gone?\n\n`+
+  `When: only when ${p.soil.charAt(0).toLowerCase()+p.soil.slice(1)} (touch the soil first)\n`+
+  `How: water slowly until a bit comes out of the bottom\n`+
+  `Light: ${p.lightText}\n`+
+  `Please don't: ${p.mistakes[0].charAt(0).toLowerCase()+p.mistakes[0].slice(1)}\n\n`+
+  `Thank you!`;
   return `Hi! Here is how to take care of your new ${p.name}:\n\n`+
   `Water: ${p.water}\n`+
   `Check first: water only when ${p.soil.charAt(0).toLowerCase()+p.soil.slice(1)}\n`+
@@ -224,16 +233,21 @@ function noteText(p){
   `Sent with Leafswap`;
 }
 function renderShare(el){
-  const p=P(state.share);
+  const p=P(state.share.id),mode=state.share.mode,txt=noteText(p,mode);
+  const head=mode==='sitter'
+    ?`<h2>Ask a friend to water your ${esc(p.name)}</h2><p class="sub">Send this to the friend who waters your plant while you are away.</p>`
+    :`<h2>Giving your ${esc(p.name)} away?</h2><p class="sub">Send this care note with the plant, so your friend knows what to do.</p>`;
   el.innerHTML=`<div class="row"><button class="btn plain" id="back">← Back</button></div>
   <div class="card">
-    <div><h2>Give your ${esc(p.name)} to a friend</h2><p class="sub">Send this care note with the plant, so your friend does not have to search for advice.</p></div>
-    <pre class="note" id="note">${esc(noteText(p))}</pre>
-    <div class="row"><button class="btn" id="copy">Copy care note</button></div>
+    <div>${head}</div>
+    <pre class="note" id="note">${esc(txt)}</pre>
+    <div class="row"><a class="btn" id="wa" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Send on WhatsApp</a>
+    ${navigator.share?'<button class="btn ghost" id="shr">Send another way</button>':''}
+    <button class="btn plain" id="copy">Copy text</button></div>
   </div>`;
+  const shr=$('shr');if(shr)shr.onclick=()=>{navigator.share({text:txt}).catch(()=>{})};
   $('back').onclick=()=>{state.share=null;render()};
   $('copy').onclick=()=>{
-    const txt=noteText(p);
     const sel=()=>{const r=document.createRange();r.selectNodeContents($('note'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Text selected, copy it from here')};
     try{navigator.clipboard.writeText(txt).then(()=>toast('Care note copied, paste it in WhatsApp'),sel)}catch(e){sel()}
   };
@@ -275,11 +289,11 @@ function renderAway(){
   <div class="stepper"><button id="minus" aria-label="One day less">−</button><output id="days">${d}</output><button id="plus" aria-label="One day more">+</button><span class="sub">days away</span></div>
   ${state.mine.length?`<ul class="list">${state.mine.map(m=>{const p=P(m.id),a=awayAdvice(p,d);
     return `<li class="item"><div><h3>${p.name}</h3><p>${a.text}</p><p class="rule">Can go about ${p.awayOk} ${p.awayOk===1?'day':'days'} without water</p></div>
-    <div class="row"><span class="tag ${a.ok?'':'due'}">${a.label}</span>${a.share?`<button class="btn ghost" data-share="${p.id}">Care note</button>`:''}</div></li>`}).join('')}</ul>`
+    <div class="row"><span class="tag ${a.ok?'':'due'}">${a.label}</span>${a.share?`<button class="btn ghost" data-share="${p.id}">Ask a friend to water</button>`:''}</div></li>`}).join('')}</ul>`
   :'<p class="empty">Add plants in All plants to get a plan.</p>'}`;
   const set=v=>{state.away=Math.max(1,Math.min(60,v));save('ls2-away',state.away);renderAway()};
   $('minus').onclick=()=>set(d-1);$('plus').onclick=()=>set(d+1);
-  el.querySelectorAll('[data-share]').forEach(b=>b.onclick=()=>{state.tab='mine';state.share=b.dataset.share;render()});
+  el.querySelectorAll('[data-share]').forEach(b=>b.onclick=()=>{state.tab='mine';state.share={id:b.dataset.share,mode:'sitter'};render()});
 }
 
 /* ---------- All plants ---------- */
@@ -301,11 +315,11 @@ function renderPlants(){
       <div class="myth"><p><b>You may have read:</b> ${p.myth}</p><p><b>Do this instead:</b> ${p.truth}</p></div>
       <div><h3>Common mistakes</h3><ul class="plainlist">${p.mistakes.map(m=>`<li>${m}</li>`).join('')}</ul></div>
       <div class="row"><button class="btn" id="add" ${has?'disabled':''}>${has?'In my plants':'Add to my plants'}</button>
-      <button class="btn ghost" id="share">Give to a friend</button></div>
+      <button class="btn ghost" id="share">Giving it away? Send care note</button></div>
     </div>`;
     $('back').onclick=()=>{state.open=null;renderPlants()};
     $('add').onclick=()=>{state.mine.push({id:p.id,last:Date.now()});saveMine();toast(p.name+' added to My plants');renderPlants()};
-    $('share').onclick=()=>{state.tab='mine';state.share=p.id;state.open=null;render()};
+    $('share').onclick=()=>{state.tab='mine';state.share={id:p.id,mode:'gift'};state.open=null;render()};
     return;
   }
   const q=state.query.trim().toLowerCase();
@@ -324,7 +338,7 @@ function render(){
   ['mine','help','away','plants'].forEach(t=>$('panel-'+t).hidden=t!==state.tab);
   ({mine:renderMine,help:renderHelp,away:renderAway,plants:renderPlants})[state.tab]();
 }
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;if(b.dataset.tab!=='mine')state.share=null;render()});
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.share=null;state.open=null;render()});
 render();
 </script>
 </body>
